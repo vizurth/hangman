@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 public class Main {
-    private static String[] HANGMAN = {
+    private static final String[] HANGMAN = {
             """
       +---+
       |   |
@@ -68,10 +68,12 @@ public class Main {
 
     private static final int MAX_ERRORS = 6;
 
-    private static Scanner scanner = new Scanner(System.in);
-    private static Random r = new Random();
+    private static final Scanner scanner = new Scanner(System.in);
+    private static final Random r = new Random();
 
     public static void main(String[] args) throws IOException {
+        List<String> words = Files.readAllLines(Path.of("words.txt"));
+
         String scan;
         while (true) {
             System.out.print("[N]ext word or [E]xit: ");
@@ -86,34 +88,34 @@ public class Main {
                 continue;
             }
 
-            startGame();
+            startGame(words);
         }
     }
 
-    public static void startGame() throws IOException {
+    public static void startGame(List<String> words) throws IOException {
         int currErrors = 0;
         int currGuessed = 0;
+
         List<String> usedLetters = new ArrayList<>();
 
-        List<String> words = Files.readAllLines(Path.of("words.txt"));
+        List<String> word = Arrays.stream(chooseWord(words).split("")).toList();
+        int uniqSymbols = countOfUniqSymb(word);
 
-        String[] word = chooseWord(words).split("");
-
-        String[] field = initField(word.length);
+        List<String> field = initField(word.size());
 
         do {
             printGameState(field, usedLetters);
 
             String currSymbol = readLetter();
             System.out.println();
-            boolean contain = Arrays.asList(word).contains(currSymbol);
+            boolean contain = word.contains(currSymbol);
             if (usedLetters.contains(currSymbol)) {
                 System.out.println("You already guessed this letter, try again");
             } else if (contain) {
                 replaceStars(field, word, currSymbol);
                 usedLetters.add(currSymbol);
                 currGuessed++;
-                if (currGuessed == countOfUniqSymb(word)) break;
+                if (currGuessed == uniqSymbols) break;
             } else {
                 usedLetters.add(currSymbol);
                 handleWrongGuess(currErrors);
@@ -123,10 +125,10 @@ public class Main {
 
         } while (currErrors < MAX_ERRORS);
 
-        printResult(currGuessed == countOfUniqSymb(word), word);
+        printResult(currGuessed == uniqSymbols, word);
     }
 
-    static void printGameState(String[] field, List<String> usedLetters) {
+    static void printGameState(List<String> field, List<String> usedLetters) {
         System.out.println(String.join("", field));
         if (!usedLetters.isEmpty()) {
             System.out.println("You already guessed letters: " + String.join(" ", usedLetters));
@@ -138,32 +140,30 @@ public class Main {
         return words.get(wordIdx);
     }
 
-    static void replaceStars(String[] field, String[] word, String symb) {
-        for (int i = 0; i < word.length; i++) {
-            if (Objects.equals(word[i], symb)) {
-                field[i] = symb;
+    static void replaceStars(List<String> field, List<String>  word, String symb) {
+        for (int i = 0; i < word.size(); i++) {
+            if (Objects.equals(word.get(i), symb)) {
+                field.set(i, symb);
             }
         }
     }
 
-    static int countOfUniqSymb(String[] word) {
-        Set<String> set = new HashSet<>(Arrays.asList(word));
+    static int countOfUniqSymb(List<String> word) {
+        Set<String> set = new HashSet<>(word);
         return set.size();
     }
 
-    static String[] initField(int n) {
-        String[] field = new String[n];
-        Arrays.fill(field, "*");
-
-        return field;
+    static List<String> initField(int n) {
+        return new ArrayList<>(Collections.nCopies(n, "*"));
     }
 
-    static void printResult(boolean guessed, String[] word) {
+    static void printResult(boolean guessed, List<String> word) {
         if (guessed) {
             System.out.println("Congrats you guessed the word!!!!");
             System.out.println("Word is " + String.join("", word));
         } else {
             System.out.println("Sorry you loss the game((((((");
+            System.out.println("Word was is " + String.join("", word));
         }
     }
 
